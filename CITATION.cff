@@ -1,10 +1,9 @@
 cff-version: 1.2.0
-title: "Floyd Multi-Head Attention"
+title: "floydnet"
 authors:
-  - family-names: YourSurname
-    given-names: YourName
-    orcid: "0000-0000-0000-0000"
-version: "0.1.0"
-license: MIT
-repository-code: "https://github.com/yourname/floyd-net"
-message: "If you use this software, please cite it as below."
+  - family-names: Qiwei
+    given-names: Ye
+version: "1.0.0"
+license: Apache-2.0
+repository-code: "https://github.com/ocx-lab/floydnet"
+message: "Feel free to cite FloydNet in your publications if it helps your research!"
