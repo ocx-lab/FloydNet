@@ -1,0 +1,7 @@
+torch>=2.9
+wandb
+einops
+tqdm
+torch_geometric
+loguru
+pandas

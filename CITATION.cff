@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+title: "Floyd Multi-Head Attention"
+authors:
+  - family-names: YourSurname
+    given-names: YourName
+    orcid: "0000-0000-0000-0000"
+version: "0.1.0"
+license: MIT
+repository-code: "https://github.com/yourname/floyd-net"
+message: "If you use this software, please cite it as below."
