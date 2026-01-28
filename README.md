@@ -139,12 +139,15 @@ The full changelog is in [CHANGELOG.md](CHANGELOG.md).
 If you use this code in your research, please cite the paper:
 
 ```bibtex
-@inproceedings{TODO,
-  title     = {TODO},
-  author    = {TODO},
-  booktitle = {TODO},
-  year      = {TODO},
-  url       = {TODO}
+@misc{yu2026floydnetlearningparadigmglobal,
+      title={FloydNet: A Learning Paradigm for Global Relational Reasoning}, 
+      author={Jingcheng Yu and Mingliang Zeng and Qiwei Ye},
+      year={2026},
+      eprint={2601.19094},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2601.19094}, 
+
 }
 ```
 

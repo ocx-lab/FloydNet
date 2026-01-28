@@ -1,9 +1,17 @@
 cff-version: 1.2.0
-title: "floydnet"
+title: "FloydNet"
+message: "If you use FloydNet in your research, please cite the associated paper."
+type: software
 authors:
-  - family-names: Qiwei
-    given-names: Ye
+  - family-names: Yu
+    given-names: Jingcheng
+  - family-names: Zeng
+    given-names: Mingliang
+  - family-names: Ye
+    given-names: Qiwei
 version: "1.0.0"
 license: Apache-2.0
-repository-code: "https://github.com/ocx-lab/floydnet"
-message: "Feel free to cite FloydNet in your publications if it helps your research!"
+repository-code: "https://github.com/ocx-lab/FloydNet"
+doi: "10.48550/arXiv.2601.19094"
+url: "https://arxiv.org/abs/2601.19094"
+date-released: 2026-01-27
