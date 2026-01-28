@@ -33,10 +33,16 @@ class ModelConfig:
     enable_adj_emb: bool = True
     enable_diffusion: bool = False
     task_level: str = "g"
+    n_edge_feat: int = 0
     edge_feat_vocab_size: int = -1
     n_decode_layers: int = 1
     decoder_mask_by_adj: bool = False
     enable_ffn: bool = True
+    node_feat_vocab_size: int = 0
+    n_node_feat: int = 0
+    supernode: bool = False
+    dropout: float = 0.0
+    norm_fn: str = "affine"
 
 class DiffusionEmbedder(nn.Module):
     def __init__(self, n_embd):
@@ -110,12 +116,20 @@ class FloydNet(nn.Module):
 
         if config.enable_adj_emb:
             self.emb_adj = nn.Embedding(2, config.n_embd)
-        if config.edge_feat_vocab_size > 0:
-            self.emb_edge = nn.Embedding(config.edge_feat_vocab_size, config.n_embd)
+        if config.n_edge_feat > 0 and config.edge_feat_vocab_size > 0:
+            if config.n_edge_feat != 1:
+                self.emb_edge = nn.ModuleList([nn.Embedding(config.edge_feat_vocab_size, config.n_embd) for _ in range(config.n_edge_feat)])
+            else: 
+                self.emb_edge = nn.Embedding(config.edge_feat_vocab_size, config.n_embd)
         if config.enable_diffusion:
             self.diffusion_embedder = DiffusionEmbedder(config.n_embd)
+        if config.n_node_feat > 0 and config.node_feat_vocab_size > 0:
+            self.emb_node_i = nn.ModuleList([nn.Embedding(config.node_feat_vocab_size, config.n_embd) for _ in range(config.n_node_feat)])
+            self.emb_node_j = nn.ModuleList([nn.Embedding(config.node_feat_vocab_size, config.n_embd) for _ in range(config.n_node_feat)])
+        if config.supernode:
+            self.emb_superedge = nn.Embedding(4, config.n_embd)
 
-        self.blocks = nn.ModuleList([PivotalAttentionBlock(embed_dim=config.n_embd, num_heads=config.n_head, activation_fn="silu", norm_fn="affine", enable_ffn=config.enable_ffn)  for _ in range(config.depth)])
+        self.blocks = nn.ModuleList([PivotalAttentionBlock(embed_dim=config.n_embd, num_heads=config.n_head, activation_fn="silu", norm_fn=self.config.norm_fn, enable_ffn=config.enable_ffn, dropout=self.config.dropout)  for _ in range(config.depth)])
         if "g" in config.task_level:
             self.head_g = FFN(config.n_embd, config.n_out, config.n_decode_layers)
         if "v" in config.task_level:
@@ -127,7 +141,18 @@ class FloydNet(nn.Module):
         if hasattr(self, "emb_adj"):
             nn.init.normal_(self.emb_adj.weight, mean=0.0, std=1.0)
         if hasattr(self, "emb_edge"):
-            nn.init.normal_(self.emb_edge.weight, mean=0.0, std=1.0)
+            if self.config.n_edge_feat > 1:
+                for emb in self.emb_edge:
+                    nn.init.normal_(emb.weight, mean=0.0, std=1.0)
+            else:
+                nn.init.normal_(self.emb_edge.weight, mean=0.0, std=1.0)
+        if hasattr(self, "emb_node_i"):
+            for emb in self.emb_node_i:
+                nn.init.normal_(emb.weight, mean=0.0, std=1.0)
+            for emb in self.emb_node_j:
+                nn.init.normal_(emb.weight, mean=0.0, std=1.0)
+        if hasattr(self, "emb_superedge"):
+            nn.init.normal_(self.emb_superedge.weight, mean=0.0, std=1.0)
         if hasattr(self, "diffusion_embedder"):
             self.diffusion_embedder.init_weights()
         if hasattr(self, "head_g"):
@@ -141,16 +166,46 @@ class FloydNet(nn.Module):
             b._reset_parameters()
 
     def preprocess(self, graph: pyg.data.Data):
-        return graph_preprocess(graph)
+        return graph_preprocess(graph, supernode=self.config.supernode)
 
     def embed(self, graph: pyg.data.Data):
         x = 0.0
         if self.config.enable_adj_emb:
             x = x + self.emb_adj(graph.adj)
         if self.config.edge_feat_vocab_size > 0:
-            x = x + self.emb_edge(graph.adj_attr[:, :, :, 0])
+            if self.config.n_edge_feat > 1:
+                for idx in range(self.config.n_edge_feat):
+                    x = x + self.emb_edge[idx](graph.adj_attr[:, :, :, idx])
+            else:
+                x = x + self.emb_edge(graph.adj_attr[:, :, :, 0])
+        if self.config.n_node_feat > 0 and self.config.node_feat_vocab_size > 0:
+            if self.config.supernode:
+                graph.x = graph.x.to(torch.long)
+                emb_node_i = 0
+                emb_node_j = 0
+                for idx in range(self.config.n_node_feat):
+                    emb_node_i = emb_node_i + self.emb_node_i[idx](graph.x[:, 1:, idx])
+                    emb_node_j = emb_node_j + self.emb_node_j[idx](graph.x[:, 1:, idx])
+                # emb_node_i & j: [B, N - 1, c]
+                # add to superedge, which is first row and first column
+                # take care supernode it self is removed
+                n = graph.x.shape[1]
+                emb_node_i = emb_node_i[:, :, None]
+                emb_node_j = emb_node_j[:, None, :]
+                # i: [B, N - 1, 1, c] -> [B, N, N, c]
+                emb_node_i = torch.nn.functional.pad(emb_node_i, (0, 0, 0, n - 1, 1, 0))
+                # j: [B, 1, N - 1, c] -> [B, N, N, c]
+                emb_node_j = torch.nn.functional.pad(emb_node_j, (0, 0, 1, 0, 0, n - 1))
+
+                x = x + emb_node_i
+                x = x + emb_node_j
+            else:
+                raise ValueError("Supernode must be enabled when using node features.")
         if self.config.enable_diffusion:
             x = x + self.diffusion_embedder(graph)
+        if self.config.supernode:
+            x = x + self.emb_superedge(graph.adj_superedge)
+        
         x = x * graph.pair_mask.unsqueeze(-1)
         return x
 
