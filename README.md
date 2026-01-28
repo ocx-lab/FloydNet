@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-orange)](https://pytorch.org/)
 
-Official implementation of [FloydNet](https://openreview.net/pdf?id=aUsx1G6RVQ).
+Official implementation of [FloydNet](https://arxiv.org/pdf/2601.19094).
 
 ![Figure Pivotal Attention Mechanism for 2-Floyd/3-Floyd.](misc/pivotalattn2&3.png)
 
@@ -21,7 +21,7 @@ The repository provides:
 1. **Reusable components**: a drop-in attention/Transformer-block interface intended for integration into existing projects.
 2. **Reproduction code**: end-to-end training/evaluation pipelines to reproduce the benchmarks reported in the paper.
 
-For algorithmic details, hyperparameter choices, and analysis, please refer to the paper (TODO: link).
+For algorithmic details, hyperparameter choices, and analysis, please refer to the [paper](https://arxiv.org/pdf/2601.19094).
 
 ---
 
