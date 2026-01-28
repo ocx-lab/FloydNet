@@ -115,6 +115,7 @@ def build_model(args):
             depth=args.depth,
             enable_adj_emb=False,
             enable_diffusion=True,
+            n_edge_feat=1,
             edge_feat_vocab_size=220,
             task_level="e",
             n_decode_layers=1,
