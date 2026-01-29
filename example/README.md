@@ -1,10 +1,11 @@
 ### Benchmarks
 
-The paper reports results on **three benchmarks**:
+The paper reports results on **four benchmarks**:
 
 - Graph Count
 - BREC
 - TSP
+- LRGB
 
 ## 🚀 Key Results
 
@@ -135,3 +136,20 @@ torchrun \
 ```
 
 ---
+
+### LRGB
+
+The LRGB benchmark and dataset construction follow:
+https://github.com/vijaydwivedi75/lrgb
+
+#### PCQM-Contact
+
+```bash
+source .venv/bin/activate
+cd example
+torchrun \
+  --nproc_per_node=8 \
+  -m LRGB.run \
+  --name pcqm-contact \
+  --wandb_name LRGB_pcqm-contact
+```

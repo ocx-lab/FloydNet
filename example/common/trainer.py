@@ -95,6 +95,7 @@ class Trainer:
         logger,
         dataloader,
         start_epoch,
+        metric=None,
     ):
         start_fit_time = time.time()
         self.critn = self.critn.cuda()
@@ -114,16 +115,18 @@ class Trainer:
 
             should_evaluate_this_epoch = (epoch == 0 or (epoch + 1) % self.eval_interval == 0 or epoch == self.max_epochs - 1)
             if should_evaluate_this_epoch:
-                metrics = self.eval_fn(dataloader["val"], "Val", epoch,)
+                metrics = self.eval_fn(dataloader["val"], "Val", epoch, metric=metric)
                 min_val_loss = min(min_val_loss, metrics["loss"])
                 logger.log({f"val/{k}": v for k, v in metrics.items()})
+                print0(f"val metrics: {metrics}")
                 self.scheduler.step(loss)
                 if (epoch + 1) % self.save_interval == 0 or epoch == self.max_epochs - 1:
                     save_checkpoint(self.model, self.optimizer, self.scheduler, epoch, loss, self.out_dir / "checkpoints")
 
             should_test_this_epoch = ((epoch + 1) % self.test_interval == 0 or epoch == self.max_epochs - 1)
             if should_test_this_epoch:
-                metrics = self.eval_fn(dataloader["test"], "Test", epoch,)
+                metrics = self.eval_fn(dataloader["test"], "Test", epoch, metric=metric)
+                print0(f"test metrics: {metrics}")
                 min_test_loss = min(min_test_loss, metrics["loss"])
                 logger.log({f"test/{k}": v for k, v in metrics.items()})
 
@@ -135,8 +138,9 @@ class Trainer:
         dataloader,
         epoch,
         sample_count_per_case=1,
+        metric=None,
     ):
-        loss = self.eval_fn(dataloader["test"], "Test", epoch, sample_count_per_case=sample_count_per_case)
+        loss = self.eval_fn(dataloader["test"], "Test", epoch, sample_count_per_case=sample_count_per_case, metric=metric)
         return loss
 
     def _train_epoch(self, loader, epoch):
@@ -178,11 +182,13 @@ class Trainer:
         return loss_sum / loss_count
 
     @torch.no_grad()
-    def _evaluate(self, loader, stage_name, epoch, **kwargs):
+    def _evaluate(self, loader, stage_name, epoch, metric=None, **kwargs):
         self.model.eval()
         loss_sum = 0.0
         loss_count = 0
         loss_breakdown_sum = {}
+        if metric is not None:
+            metric.clean()
 
         max_len = self.max_val_epoch_len if stage_name.lower() == "val" else self.max_test_epoch_len
         progress_bar = tqdm(loader, desc=f"{stage_name} Epoch {epoch+1}/{self.max_epochs}", leave=False, file=sys.stdout, total=min(len(loader), max_len), disable=not is_master_process())
@@ -203,6 +209,9 @@ class Trainer:
             loss_sum += loss.item()
             loss_count += 1
 
+            if metric is not None:
+                metric.add_batch(pred, graph_batch)
+
             progress_bar.set_postfix(loss=f'{loss.item():.5f}')
 
         progress_bar.close()
@@ -210,11 +219,20 @@ class Trainer:
         metrics = {k: v / loss_count for k, v in loss_breakdown_sum.items()}
         metrics["loss"] = loss_sum / loss_count
         metrics = reduce_metrics(metrics)
+
+        if metric is not None:
+            new_metric = metric.compute()
+            new_metric = reduce_metrics(new_metric, reduction="sum")
+            for k, v in new_metric.items():
+                if k != "sample_count" and "sample_count" in new_metric:
+                    v = v / new_metric["sample_count"]
+                metrics[k] = v
+
         return metrics
 
     
     @torch.no_grad()
-    def _evaluate_TSP(self, loader, stage_name, epoch, sample_count_per_case=1):
+    def _evaluate_TSP(self, loader, stage_name, epoch, sample_count_per_case=1, **kwargs):
         self.model.eval()
         out_dir = self.out_dir / f"{stage_name}_infer_results_epoch{epoch+1}"
         out_dir.mkdir(parents=True, exist_ok=True)

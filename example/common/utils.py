@@ -101,7 +101,7 @@ def empty_cache():
     gc.collect()
     torch.cuda.synchronize()
 
-def reduce_metrics(metric_dict):
+def reduce_metrics(metric_dict, reduction="mean"):
     if not is_ddp_initialized():
         return metric_dict
 
@@ -110,8 +110,13 @@ def reduce_metrics(metric_dict):
 
     dist.all_reduce(metric_values, op=dist.ReduceOp.SUM)
 
-    world_size = dist.get_world_size()
-    metric_values /= world_size
+    if reduction == "mean":
+        world_size = dist.get_world_size()
+        metric_values /= world_size
+    elif reduction == "sum":
+        pass  # already summed
+    else:
+        raise ValueError(f"Unsupported reduction type: {reduction}")
 
     avg_metric_dict = {k: v.item() for k, v in zip(metric_names, metric_values)}
     return avg_metric_dict

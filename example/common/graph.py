@@ -72,7 +72,7 @@ def batch_pad_e_y(y, ptr, counts, max_m):
     return padded_y
 
 
-def graph_preprocess(graph):
+def graph_preprocess(graph, supernode):
     """
     Convert a PyG-style batched graph object into dense, per-graph padded tensors.
 
@@ -115,6 +115,18 @@ def graph_preprocess(graph):
 
     if "y_edge" in graph:
         graph.y_edge = batch_pad_e_y(graph.y_edge, graph.y_edge_ptr, counts, max_m)
+
+    if supernode:
+        b, m = x.shape[:2]
+        is_supernode = torch.zeros((b, m), dtype=torch.long, device=adj.device)
+        adj_superedge = torch.zeros((b, m, m), dtype=torch.long, device=adj.device)
+        is_supernode[:, 0] = 1
+        adj_superedge[:, 0, :] = 1
+        adj_superedge[:, :, 0] = 2
+        adj_superedge[:, 0, 0] = 3
+
+        graph.is_supernode = is_supernode
+        graph.adj_superedge = adj_superedge
 
     graph.x = x
     graph.single_mask = mask

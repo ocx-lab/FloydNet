@@ -216,3 +216,4 @@ example/outputs
 count.out
 run_scripts
 example/data/TSP
+example/data/BREC/
