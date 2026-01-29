@@ -86,7 +86,7 @@ def build_dataloader(args):
 def build_model(args):
     if args.arch == "gcn":
         print0("Using GCN model for LRGB task")
-        model_config = GCNContactConfig(dense_repr=args.dense_repr)
+        model_config = GCNContactConfig()
         model = GCNContactModel(model_config).to("cuda")
         print0(model)
     else:
