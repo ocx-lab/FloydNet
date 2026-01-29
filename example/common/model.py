@@ -117,7 +117,7 @@ class FloydNet(nn.Module):
         if config.enable_adj_emb:
             self.emb_adj = nn.Embedding(2, config.n_embd)
         if config.n_edge_feat > 0 and config.edge_feat_vocab_size > 0:
-            if config.n_edge_feat != 1:
+            if config.n_edge_feat > 1:
                 self.emb_edge = nn.ModuleList([nn.Embedding(config.edge_feat_vocab_size, config.n_embd) for _ in range(config.n_edge_feat)])
             else: 
                 self.emb_edge = nn.Embedding(config.edge_feat_vocab_size, config.n_embd)

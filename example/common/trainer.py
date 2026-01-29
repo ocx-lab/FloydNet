@@ -118,7 +118,7 @@ class Trainer:
                 metrics = self.eval_fn(dataloader["val"], "Val", epoch, metric=metric)
                 min_val_loss = min(min_val_loss, metrics["loss"])
                 logger.log({f"val/{k}": v for k, v in metrics.items()})
-                print("val metrics:", metrics)
+                print0(f"val metrics: {metrics}")
                 self.scheduler.step(loss)
                 if (epoch + 1) % self.save_interval == 0 or epoch == self.max_epochs - 1:
                     save_checkpoint(self.model, self.optimizer, self.scheduler, epoch, loss, self.out_dir / "checkpoints")
@@ -126,7 +126,7 @@ class Trainer:
             should_test_this_epoch = ((epoch + 1) % self.test_interval == 0 or epoch == self.max_epochs - 1)
             if should_test_this_epoch:
                 metrics = self.eval_fn(dataloader["test"], "Test", epoch, metric=metric)
-                print("test metrics:", metrics)
+                print0(f"test metrics: {metrics}")
                 min_test_loss = min(min_test_loss, metrics["loss"])
                 logger.log({f"test/{k}": v for k, v in metrics.items()})
 
@@ -138,6 +138,7 @@ class Trainer:
         dataloader,
         epoch,
         sample_count_per_case=1,
+        metric=None,
     ):
         loss = self.eval_fn(dataloader["test"], "Test", epoch, sample_count_per_case=sample_count_per_case, metric=metric)
         return loss

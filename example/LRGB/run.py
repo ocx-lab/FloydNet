@@ -46,7 +46,7 @@ def parse_args():
     parser.add_argument("--n_head", type=int, default=4, help="Number of attention heads")
     parser.add_argument("--depth", type=int, default=32, help="Number of floyd transformer layers")
     parser.add_argument("--dropout", type=float, default=0.15)
-    parser.add_argument("--gcn", action="store_true", help="Use GCN model instead of FloydNet")
+    parser.add_argument("--arch", type=str, default="floydnet", choices=["floydnet", "gcn"], help="Model architecture to use")
     # training
     parser.add_argument("--max_train_epoch_len", type=int, default=400, help="Maximum length of training epoch in number of samples")
     parser.add_argument("--max_val_epoch_len", type=int, default=1000, help="Maximum length of validation epoch in number of samples")
@@ -84,7 +84,7 @@ def build_dataloader(args):
 
 
 def build_model(args):
-    if args.gcn:
+    if args.arch == "gcn":
         print0("Using GCN model for LRGB task")
         model_config = GCNContactConfig(dense_repr=args.dense_repr)
         model = GCNContactModel(model_config).to("cuda")
@@ -140,7 +140,7 @@ def build_model(args):
         )
         print0(f"Resumed from epoch {start_epoch}")
             
-    if is_master_process() and not args.gcn:
+    if is_master_process() and args.arch == "floydnet":
         # save model config for loading model later
         output_dir = Path(args.output_dir) / "checkpoints"
         os.makedirs(output_dir, exist_ok=True)
