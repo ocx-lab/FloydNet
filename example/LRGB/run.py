@@ -31,6 +31,7 @@ from common.trainer import Trainer
 from LRGB.data import transform_pcqm
 from LRGB.criterion import FocalLoss
 from LRGB.mrr import EdgeMRR
+from LRGB.gcn_model import GCNContactModel, GCNContactConfig
 
 
 def parse_args():
@@ -45,6 +46,7 @@ def parse_args():
     parser.add_argument("--n_head", type=int, default=4, help="Number of attention heads")
     parser.add_argument("--depth", type=int, default=32, help="Number of floyd transformer layers")
     parser.add_argument("--dropout", type=float, default=0.15)
+    parser.add_argument("--gcn", action="store_true", help="Use GCN model instead of FloydNet")
     # training
     parser.add_argument("--max_train_epoch_len", type=int, default=400, help="Maximum length of training epoch in number of samples")
     parser.add_argument("--max_val_epoch_len", type=int, default=1000, help="Maximum length of validation epoch in number of samples")
@@ -82,35 +84,46 @@ def build_dataloader(args):
 
 
 def build_model(args):
-    if args.load_checkpoint is not None:
-        print0(f"Loading model from checkpoint: {args.load_checkpoint}")
-        ckpt_model_config_path = Path(args.load_checkpoint).parent / "model_config.json"
-        print0(f"Using model config from checkpoint, ignoring command line model config args")
-        with open(ckpt_model_config_path, "r") as f:
-            model_config = json.load(f)
+    if args.gcn:
+        print0("Using GCN model for LRGB task")
+        model_config = GCNContactConfig(dense_repr=args.dense_repr)
+        model = GCNContactModel(model_config).to("cuda")
+        print0(model)
     else:
-        model_config = dict(
-            n_embd=args.n_embd,
-            n_head=args.n_head,
-            n_out=1,
-            depth=args.depth,
-            enable_adj_emb=True,
-            enable_diffusion=False,
-            n_edge_feat=3,
-            edge_feat_vocab_size=120,
-            task_level="e",
-            n_decode_layers=4,
-            node_feat_vocab_size=120,
-            n_node_feat=9,
-            supernode=True,
-            dropout=args.dropout,
-            norm_fn="ln",
-        )
+        if args.load_checkpoint is not None:
+            print0(f"Loading model from checkpoint: {args.load_checkpoint}")
+            ckpt_model_config_path = Path(args.load_checkpoint).parent / "model_config.json"
+            print0(f"Using model config from checkpoint, ignoring command line model config args")
+            with open(ckpt_model_config_path, "r") as f:
+                model_config = json.load(f)
+        else:
+            model_config = dict(
+                n_embd=args.n_embd,
+                n_head=args.n_head,
+                n_out=1,
+                depth=args.depth,
+                enable_adj_emb=True,
+                enable_diffusion=False,
+                n_edge_feat=3,
+                edge_feat_vocab_size=120,
+                task_level="e",
+                n_decode_layers=4,
+                node_feat_vocab_size=120,
+                n_node_feat=9,
+                supernode=True,
+                dropout=args.dropout,
+                norm_fn="ln",
+            )
     
+        model = FloydNet(ModelConfig(**model_config)).to("cuda")
+        model.init_weights()
+        print0(model)
+
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print0(f"Total trainable parameters: {trainable_params / 1e6:.2f}M")
+
     start_epoch = 0
-    model = FloydNet(ModelConfig(**model_config)).to("cuda")
-    model.init_weights()
-    print0(model)
+
     if is_ddp_initialized():
         torch.distributed.barrier()
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[torch.cuda.current_device()])
@@ -127,7 +140,7 @@ def build_model(args):
         )
         print0(f"Resumed from epoch {start_epoch}")
             
-    if is_master_process():
+    if is_master_process() and not args.gcn:
         # save model config for loading model later
         output_dir = Path(args.output_dir) / "checkpoints"
         os.makedirs(output_dir, exist_ok=True)

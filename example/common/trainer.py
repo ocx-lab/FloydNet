@@ -223,7 +223,7 @@ class Trainer:
             new_metric = metric.compute()
             new_metric = reduce_metrics(new_metric, reduction="sum")
             for k, v in new_metric.items():
-                if k != "sample_count":
+                if k != "sample_count" and "sample_count" in new_metric:
                     v = v / new_metric["sample_count"]
                 metrics[k] = v
 
