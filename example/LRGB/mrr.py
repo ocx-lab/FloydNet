@@ -79,7 +79,7 @@ class EdgeMRR:
             mrr_list = _eval_mrr(pred_pos, pred_neg)
             for i, v in enumerate(mrr_list):
                 batch_stats[i].append(v)
-        # average among all graphs
+        # sum among all graphs, will do average outside the metric
         res = []
         for i in range(4):
             v = torch.tensor(batch_stats[i])
