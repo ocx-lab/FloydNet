@@ -72,7 +72,7 @@ def batch_pad_e_y(y, ptr, counts, max_m):
     return padded_y
 
 
-def graph_preprocess(graph, supernode):
+def graph_preprocess(graph, supernode=False):
     """
     Convert a PyG-style batched graph object into dense, per-graph padded tensors.
 
