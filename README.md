@@ -128,9 +128,9 @@ uv pip install -e .
 
 ## Changelog (latest)
 
-- Full release with training and evaluation scripts for Graph Count, BREC, and TSP.
-- Added `pivotal_attention3` functional API for 3-Floyd attention.
-- Added additional configuration options in `PivotalAttentionBlock`.
+- Added `softmax_cap` parameter to `pivotal_attention3` for improved numerical stability.
+- Added LRGB example script.
+
 
 The full changelog is in [CHANGELOG.md](CHANGELOG.md).
 

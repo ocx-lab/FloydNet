@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "floydnet"
-version = "1.0.0"
+version = "1.1.0"
 description = "Floyd Multi-Head Attention: a drop-in variant of PyTorch MHA with module and function APIs"
 readme = "README.md"
 requires-python = ">=3.9"
