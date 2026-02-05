@@ -31,6 +31,7 @@ def pivotal_attention(
     dropout: float = 0.0,
     scale: Optional[float] = None,
     inf: float = 1e9,
+    softmax_cap: float = -1,
 ) -> torch.Tensor:
     """Pivotal attention as described in "FLOYDNET: A LEARNING PARADIGM FOR GLOBAL RELATIONAL REASONING".
 
@@ -47,6 +48,9 @@ def pivotal_attention(
         dropout: Dropout probability applied to attention weights (only effective if > 0).
         scale: Optional custom scaling factor. If None, defaults to 1/sqrt(2*D).
         inf: Value to use for -infinity in masks.
+        softmax_cap: If > 0, applies a tanh-based logit cap before softmax.
+            Note: when using a non-boolean (additive) attn_mask, ensure its magnitude/semantics remain compatible
+            with capping (e.g., very large negative values used to approximate -inf can interact with logit shaping).
 
     Returns:
         Tensor of shape (B, H, L_i, L_k, D)
@@ -64,6 +68,9 @@ def pivotal_attention(
     # Compute attention scores over the pivot dimension j: (B, H, L_i, L_k, L_j)
     attn_scores = torch.einsum("bhikd,bhijd->bhikj", q_ik, k_ij) \
                 + torch.einsum("bhikd,bhjkd->bhikj", q_ik, k_jk)
+
+    if softmax_cap > 0:
+        attn_scores = softmax_cap * torch.tanh(attn_scores / softmax_cap)
 
     if attn_mask is not None:
         if attn_mask.dtype == torch.bool:
@@ -93,6 +100,7 @@ def pivotal_attention3(
     dropout: float = 0.0,
     scale: Optional[float] = None,
     inf: float = 1e9,
+    softmax_cap: float = -1,
 ) -> torch.Tensor:
     """3-Pivotal attention as described in "FLOYDNET: A LEARNING PARADIGM FOR GLOBAL RELATIONAL REASONING".
 
@@ -111,9 +119,12 @@ def pivotal_attention3(
         dropout: Dropout probability applied to attention weights (only effective if > 0).
         scale: Optional custom scaling factor. If None, defaults to 1/sqrt(3*D).
         inf: Value to use for -infinity in masks.
+        softmax_cap: If > 0, applies a tanh-based logit cap before softmax.
+            Note: when using a non-boolean (additive) attn_mask, ensure its magnitude/semantics remain compatible
+            with capping (e.g., very large negative values used to approximate -inf can interact with logit shaping).
 
     Returns:
-        Tensor of shape (B, H, L_i, l_j, L_k, D)
+        Tensor of shape (B, H, L_i, L_j, L_k, D)
     """
     assert all([t.dim() == 6 for t in [q_ijk, k_pjk, k_ipk, k_ijp, v_pjk, v_ipk, v_ijp]]), "All inputs must be 6D tensors"
     B, H, L_i, L_j, L_k, D = q_ijk.shape
@@ -130,6 +141,9 @@ def pivotal_attention3(
     attn_scores = torch.einsum("bhijkd,bhpjkd->bhijkp", q_ijk, k_pjk) \
                 + torch.einsum("bhijkd,bhipkd->bhijkp", q_ijk, k_ipk) \
                 + torch.einsum("bhijkd,bhijpd->bhijkp", q_ijk, k_ijp)
+            
+    if softmax_cap > 0:
+        attn_scores = softmax_cap * torch.tanh(attn_scores / softmax_cap)
 
     if attn_mask is not None:
         if attn_mask.dtype == torch.bool:

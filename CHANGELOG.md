@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-02-05
+- Added `softmax_cap` parameter to `pivotal_attention3` for improved numerical stability.
+- Added LRGB example script.
+
 ## [1.0.0] - 2026-01-25
 - Full release with training and evaluation scripts for Graph Count, BREC, and TSP.
 - Added `pivotal_attention3` functional API for 3-Floyd attention.
