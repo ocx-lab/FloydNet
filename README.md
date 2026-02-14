@@ -2,6 +2,8 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-orange)](https://pytorch.org/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/floydnet.svg)](https://pypi.org/project/floydnet)
+[![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-blue.svg)](CHANGELOG.md)
 
 Official implementation of [FloydNet](https://arxiv.org/pdf/2601.19094).
 
